@@ -15,15 +15,15 @@
 
 「夜泣き・ワンオペ愚痴の駆け込み寺」は、
 夜泣きやワンオペ育児で疲れた保護者が、
-匿名で今の気持ちを吐き出せる投稿型Webアプリケーションである。
+匿名で今の気持ちを安心して吐き出せるWebアプリケーションである。
 
-ユーザー登録は不要で、
-初回アクセス時に生成される Guest ID によって匿名利用を実現する。
+ユーザー登録やログインは不要で、
+初回アクセス時に生成される Guest ID により匿名利用を実現する。
 
-本サービスではコメント機能を設けず、
-共感スタンプのみで気持ちを伝え合う。
+投稿にはコメント機能を設けず、
+共感リアクションのみで気持ちを伝え合う設計としている。
 
-投稿はリアルタイムで全利用者へ反映され、
+投稿・リアクションは Supabase Realtime によりリアルタイム同期され、
 毎朝6時に自動削除される。
 
 ---
@@ -32,9 +32,10 @@
 
 育児中は、
 
-- 夜中に孤独を感じる
+- 夜泣きで眠れない
+- ワンオペで孤独を感じる
 - SNSでは本音を書きづらい
-- 誰にも相談できない
+- 誰かに少しだけ共感してほしい
 
 という状況が少なくない。
 
@@ -46,11 +47,12 @@
 
 他の利用者から
 
-「わかる」
-「起きてるよ」
+- お疲れさま
+- 起きてるよ
+- わかる
 
 という共感だけを受け取ることで、
-精神的負担を少しでも軽減することを目的とする。
+少しでも気持ちを軽くできる場所を目指す。
 
 ---
 
@@ -66,9 +68,24 @@
 
 評価もない。
 
-共感スタンプだけが返ってくる。
+共感リアクションだけが返ってくる。
 
-夜中でも静かにつながれる場所を目指す。
+深夜でも安心して利用できる、
+静かな場所を目指す。
+
+---
+
+## 1.5 開発方針
+
+本プロジェクトでは以下を基本方針とする。
+
+- スマホファースト
+- シンプルなUI
+- 保守性重視
+- アクセシビリティ重視
+- App Router準拠
+- 不要なライブラリを追加しない
+- 責務分離を徹底する
 
 ---
 
@@ -80,10 +97,10 @@
 - 共感
 - シンプル
 - 安心
-- 深夜向けUI
+- 深夜向け
 - モバイルファースト
-- 軽量
 - リアルタイム
+- 軽量
 
 ---
 
@@ -97,21 +114,22 @@ SNSのような承認欲求ではなく、
 
 を最優先とする。
 
-そのため以下の方針を採用する。
+---
 
 ### 匿名性
 
-- ユーザー登録なし
+- ログイン不要
 - Guest IDのみ保持
-- 個人情報を扱わない
+- 個人情報を保持しない
 
 ---
 
 ### シンプルさ
 
-- 投稿は140文字以内
+- 投稿140文字以内
 - コメントなし
 - 画像投稿なし
+- ユーザー検索なし
 
 ---
 
@@ -119,7 +137,7 @@ SNSのような承認欲求ではなく、
 
 返信ではなく、
 
-共感スタンプのみ送信できる。
+共感リアクションのみ送信できる。
 
 ---
 
@@ -127,23 +145,36 @@ SNSのような承認欲求ではなく、
 
 以下の機能は実装しない。
 
+- コメント
 - フォロー
 - ランキング
-- いいね順位
 - 通知
-- コメント
+- DM
 
 ---
 
 ### モバイルファースト
 
-スマートフォンでの利用を前提とし、
+スマートフォン利用を前提とする。
 
 - 最大幅480px
-- 下部固定投稿フォーム
-- 片手操作しやすいUI
+- 固定ヘッダー
+- 固定投稿フォーム
+- タイムラインのみスクロール
+- Safe Area対応
 
-を採用する。
+---
+
+### アクセシビリティ
+
+誰でも利用しやすいUIを目指す。
+
+- Skip Link
+- aria-label
+- aria-live
+- aria-modal
+- semantic HTML
+- キーボード操作対応
 
 ---
 
@@ -155,16 +186,16 @@ SNSのような承認欲求ではなく、
 
 ### 要件
 
-- 空文字は禁止
-- 前後空白のみは禁止
+- 空文字禁止
+- trim()実施
 - 最大140文字
 - 二重送信防止
 - Optimistic Update
-- 投稿成功後は入力欄をクリア
+- 投稿後入力クリア
 
 ---
 
-## 3.2 投稿一覧
+## 3.2 タイムライン
 
 投稿は新しい順で表示する。
 
@@ -172,8 +203,9 @@ SNSのような承認欲求ではなく、
 
 - created_at DESC
 - 最大100件取得
-- Skeleton Loader表示
-- Empty State表示
+- Skeleton Loader
+- Empty State
+- Realtime同期
 
 ---
 
@@ -183,22 +215,22 @@ Supabase Realtime を利用する。
 
 ### 要件
 
-- 新規投稿同期
+- 投稿同期
+- リアクション同期
 - 重複表示防止
-- Temporary Post置換
-- スタンプ同期
+- Optimistic Post置換
 
 ---
 
-## 3.4 共感スタンプ
+## 3.4 共感リアクション
 
 コメント機能の代替として利用する。
 
-### スタンプ一覧
+### リアクション一覧
 
 |表示|内部値|
 |----|------|
-|😮‍💨 お疲れ様|otsukare|
+|😮‍💨 お疲れさま|otsukare|
 |🌙 起きてるよ|okiteru|
 |🥹 わかる|wakaru|
 |🫂 泣きな|naiteru|
@@ -206,16 +238,16 @@ Supabase Realtime を利用する。
 
 ### 要件
 
-- 1投稿1スタンプ
-- 同じスタンプで解除
-- 別スタンプで変更
+- 1投稿につき1リアクション
+- 同一リアクションで解除
+- 別リアクションへ変更可能
 - 件数表示
 - Realtime同期
 - RPC経由で更新
 
 ---
 
-## 3.5 ゲスト管理
+## 3.5 Guest ID
 
 ユーザー登録は行わない。
 
@@ -223,19 +255,45 @@ Supabase Realtime を利用する。
 
 - UUID生成
 - localStorage保存
-- 再訪問時も同一Guest ID利用
+- 再訪問時も同じIDを利用
 
 ---
 
-## 3.6 毎朝リセット
+## 3.6 投稿自動削除
 
-毎朝6時に投稿・スタンプを削除する。
+毎朝6時に投稿を削除する。
 
 ### 要件
 
 - pg_cron利用
 - post_reactions削除
 - posts削除
+- Realtime反映
+
+---
+
+## 3.7 オープニング表示
+
+初回アクセス時のみ表示する。
+
+### 要件
+
+- 初回のみ表示
+- localStorage管理
+- フェードイン・フェードアウト
+- スクロール禁止
+
+---
+
+## 3.8 利用規約・プライバシーポリシー
+
+フッターから閲覧できる。
+
+### 要件
+
+- App Router対応
+- Footer常設
+- Linkコンポーネント利用
 
 ---
 
@@ -243,15 +301,21 @@ Supabase Realtime を利用する。
 
 |機能|概要|状態|
 |----|----|----|
-|投稿|140文字投稿|✅|
-|投稿一覧|タイムライン表示|✅|
+|匿名投稿|140文字投稿|✅|
+|タイムライン|一覧表示|✅|
 |Optimistic Update|即時反映|✅|
-|Realtime|投稿同期|✅|
+|Realtime投稿|同期|✅|
 |Guest ID|匿名利用|✅|
-|共感スタンプ|追加・変更・解除|✅|
-|Realtimeスタンプ|同期|✅|
-|RPC|toggle_reaction()利用|✅|
+|共感リアクション|追加・変更・解除|✅|
+|Realtimeリアクション|同期|✅|
+|RPC|toggle_reaction()|✅|
 |毎朝6時削除|pg_cron|✅|
+|オープニング画面|初回表示|✅|
+|利用規約|表示|✅|
+|プライバシーポリシー|表示|✅|
+|Skip Link|アクセシビリティ|✅|
+|SEO対応|metadata等|✅|
+|OGP対応|SNS共有|✅|
 |コメント|実装しない|－|
 |画像投稿|実装しない|－|
 |認証|実装しない|－|
@@ -262,56 +326,43 @@ Supabase Realtime を利用する。
 
 ## 5.1 画面構成
 
-```
-
-┌──────────────────────┐
-
-🌙 夜泣き・ワンオペ愚痴の駆け込み寺
-
-今だけ吐き出そう
-
-──────────────────────
-
-投稿カード
-
-投稿カード
-
-投稿カード
-
-──────────────────────
-
-投稿フォーム
-
-送信ボタン
-
-└──────────────────────┘
-
+```text
+┌────────────────────────────┐
+│ 🌙 夜泣き・ワンオペ愚痴の駆け込み寺 │
+├────────────────────────────┤
+│                            │
+│        タイムライン         │
+│                            │
+│   ┌──────────────────┐     │
+│   │ 投稿カード        │     │
+│   └──────────────────┘     │
+│                            │
+│   ┌──────────────────┐     │
+│   │ 投稿カード        │     │
+│   └──────────────────┘     │
+│                            │
+├────────────────────────────┤
+│ 投稿フォーム               │
+│────────────────────────────│
+│ 利用規約｜プライバシーポリシー │
+└────────────────────────────┘
 ```
 
 ---
 
 ## 5.2 コンポーネント構成
 
-```
-
+```text
 Home
-
+├── OpeningOverlay
 ├── Header
-
 ├── Timeline
-
-│
-
-├── PostCard
-
-│
-
-└── ReactionBar
-
-│
-
-└── PostForm
-
+│   └── PostCard
+│       └── ReactionBar
+├── PostForm
+└── Footer
+    ├── Terms Link
+    └── Privacy Link
 ```
 
 ---
@@ -321,15 +372,15 @@ Home
 表示項目
 
 - 投稿本文
-- 投稿日時（○分前）
-- 共感スタンプ
-- スタンプ合計数
+- 投稿日時
+- 共感リアクション
+- リアクション件数
 
-カードデザイン
+デザイン
 
 - ダークテーマ
 - Rounded XL
-- Hover Shadow
+- Shadow
 - モバイル最適化
 
 ---
@@ -340,51 +391,76 @@ Home
 
 - テキストエリア
 - 残文字数
-- 送信ボタン
+- 投稿ボタン
 
 仕様
 
-- 画面下固定
+- 下部固定
 - Safe Area対応
-- 入力中スクロール防止
-- フォーカスリング表示
-- aria-label設定
+- aria-label対応
+- 二重送信防止
 
 ---
 
-## 5.5 共感スタンプ
+## 5.5 共感リアクション
 
 表示内容
 
-😮‍💨 お疲れ様
-
-🌙 起きてるよ
-
-🥹 わかる
-
-🫂 泣きな
-
-💪 がんばれ
+- 😮‍💨 お疲れさま
+- 🌙 起きてるよ
+- 🥹 わかる
+- 🫂 泣きな
+- 💪 がんばれ
 
 仕様
 
-- 1投稿につき1つのみ
+- 1投稿1リアクション
 - 再タップで解除
-- ボタンサイズ44px以上
-- hoverアニメーション
-- activeアニメーション
+- RPC経由
+- Realtime同期
 - aria-pressed対応
-- aria-label対応
+- PCクリック・スマホ長押し対応
 
+---
+
+## 5.6 オープニング画面
+
+初回アクセス時のみ表示する。
+
+表示内容
+
+- メッセージアニメーション
+- フェードイン
+- フェードアウト
+
+localStorage により一度だけ表示する。
+
+---
+
+## 5.7 フッター
+
+表示項目
+
+- 利用規約
+- プライバシーポリシー
+
+Next.js Link を利用し、
+App Router の画面遷移を行う。
+
+# 6. システム構成
+
+## 6.1 全体構成
+
+```text
 ┌─────────────────────────────┐
-│          Browser            │
-│ (Chrome / Safari / Edge)    │
+│ Browser                     │
+│ Chrome / Safari / Edge      │
 └────────────┬────────────────┘
              │
              ▼
 ┌─────────────────────────────┐
-│ Next.js 15 (App Router)     │
-│ React 19 + TypeScript       │
+│ Next.js App Router          │
+│ React + TypeScript          │
 └────────────┬────────────────┘
              │
              ▼
@@ -399,7 +475,6 @@ Home
              ▼
 ┌─────────────────────────────┐
 │ Supabase JavaScript SDK     │
-│ (Singleton Client)          │
 └────────────┬────────────────┘
              │
              ▼
@@ -408,9 +483,312 @@ Home
 │                             │
 │ PostgreSQL                  │
 │ Realtime                    │
-│ RPC(Function)               │
+│ RPC                         │
+│ pg_cron                     │
 │ Row Level Security          │
 └─────────────────────────────┘
+```
+
+---
+
+## 6.2 使用サービス
+
+|サービス|用途|
+|---------|----|
+|Next.js App Router|フロントエンド|
+|Supabase PostgreSQL|データベース|
+|Supabase Realtime|リアルタイム同期|
+|Supabase RPC|リアクション処理|
+|pg_cron|毎朝6時自動削除|
+|Vercel|本番環境|
+
+---
+
+## 6.3 採用方針
+
+- App Router を採用
+- UI とロジックを分離
+- Hook ベース設計
+- Singleton Supabase Client
+- Realtime による即時同期
+- RPC によるリアクション処理集約
+- 保守性を優先したシンプルな構成
+
+---
+
+# 7. データベース設計
+
+## 7.1 posts テーブル
+
+|列名|型|備考|
+|----|----|----|
+|id|uuid|PK|
+|guest_id|uuid|匿名ユーザーID|
+|body|text|投稿本文|
+|created_at|timestamptz|投稿日時|
+
+### インデックス
+
+- posts_created_at_idx
+- posts_guest_id_idx
+
+---
+
+## 7.2 post_reactions テーブル
+
+|列名|型|備考|
+|----|----|----|
+|id|uuid|PK|
+|post_id|uuid|FK(posts.id)|
+|guest_id|text|匿名ユーザーID|
+|reaction|text|リアクション種別|
+|created_at|timestamptz|作成日時|
+
+### インデックス
+
+- unique_post_guest
+- idx_post_reactions_post_id
+
+---
+
+## 7.3 外部キー
+
+```text
+posts
+   │
+   └──── id
+          ▲
+          │
+post_reactions.post_id
+```
+
+投稿削除時は
+
+```
+ON DELETE CASCADE
+```
+
+によりリアクションも自動削除される。
+
+---
+
+## 7.4 Realtime
+
+Realtime対象テーブル
+
+- posts
+- post_reactions
+
+Publication
+
+```
+supabase_realtime
+```
+
+---
+
+## 7.5 Cron
+
+毎朝6時に以下を実行する。
+
+```sql
+DELETE FROM post_reactions;
+
+DELETE FROM posts;
+```
+
+---
+
+# 8. コンポーネント設計
+
+## 8.1 コンポーネント構成
+
+```text
+Home
+│
+├── Header
+├── Timeline
+│
+├── PostCard
+│    └── ReactionBar
+│
+├── PostForm
+│
+└── Opening Overlay
+```
+
+---
+
+## 8.2 Home
+
+責務
+
+- 全体レイアウト
+- 投稿送信
+- オープニング表示
+- Footerリンク表示
+
+---
+
+## 8.3 Timeline
+
+責務
+
+- 投稿一覧表示
+- Loading表示
+- Empty State表示
+
+---
+
+## 8.4 PostCard
+
+責務
+
+- 投稿本文表示
+- 投稿日時表示
+- リアクション表示
+
+---
+
+## 8.5 ReactionBar
+
+責務
+
+- リアクション表示
+- リアクション追加
+- リアクション変更
+- リアクション解除
+- 長押し操作（スマホ）
+- クリック操作（PC）
+
+---
+
+## 8.6 PostForm
+
+責務
+
+- 投稿入力
+- バリデーション
+- 投稿送信
+
+---
+
+# 9. Hook設計
+
+## 9.1 useGuestId
+
+責務
+
+- UUID生成
+- localStorage保存
+- Guest ID取得
+
+---
+
+## 9.2 usePosts
+
+責務
+
+- 投稿取得
+- 投稿追加
+- Optimistic Update
+- Realtime同期
+
+---
+
+## 9.3 useReactions
+
+責務
+
+- RPC呼び出し
+- リアクション取得
+- Realtime同期
+- 件数更新
+- 自分のリアクション管理
+
+---
+
+# 10. ディレクトリ構成
+
+```text
+src
+├── app
+│   ├── layout.tsx
+│   ├── page.tsx
+│   ├── manifest.ts
+│   ├── robots.ts
+│   ├── sitemap.ts
+│   ├── privacy
+│   │   └── page.tsx
+│   └── terms
+│       └── page.tsx
+│
+├── components
+│   ├── PostForm.tsx
+│   ├── Timeline.tsx
+│   ├── PostCard.tsx
+│   └── ReactionBar.tsx
+│
+├── hooks
+│   ├── useGuestId.ts
+│   ├── usePosts.ts
+│   └── useReactions.ts
+│
+├── lib
+│   └── supabase
+│       └── client.ts
+│
+└── types
+    └── index.ts
+
+public
+├── favicon.ico
+├── icon.png
+├── apple-icon.png
+└── og-image.png
+```
+
+---
+
+## ディレクトリ方針
+
+### app
+
+- 画面
+- レイアウト
+- SEO設定
+- 利用規約
+- プライバシーポリシー
+
+---
+
+### components
+
+UIのみ担当する。
+
+---
+
+### hooks
+
+ビジネスロジックを担当する。
+
+---
+
+### lib
+
+Supabase Client を Singleton として管理する。
+
+---
+
+### types
+
+共通型を一元管理する。
+
+---
+
+### public
+
+favicon・OGP画像・PWAアイコンなどの静的ファイルを配置する。
 
 # 11. 処理フロー
 
@@ -418,7 +796,7 @@ Home
 
 ### 処理概要
 
-アプリ起動時に Guest ID を取得し、投稿一覧を読み込む。
+初回アクセス時に Guest ID を取得し、投稿一覧を読み込む。
 
 ### 処理フロー
 
@@ -431,8 +809,10 @@ useGuestId()
         ▼
 localStorage確認
         │
-        ▼
-Guest ID取得（存在しない場合はUUID生成）
+        ├───────────────┐
+        │存在する        │存在しない
+        ▼               ▼
+Guest ID取得      UUID生成・保存
         │
         ▼
 usePosts()
@@ -441,10 +821,10 @@ usePosts()
 投稿一覧取得
         │
         ▼
-Timeline表示
+Realtime購読開始
         │
         ▼
-Realtime購読開始
+Timeline表示
 ```
 
 ---
@@ -461,13 +841,14 @@ Realtime購読開始
 投稿入力
         │
         ▼
-送信ボタン押下
+送信
         │
         ▼
 入力チェック
         │
         ▼
-Optimistic Post生成(temp-UUID)
+Optimistic Post生成
+(temp-UUID)
         │
         ▼
 Timelineへ追加
@@ -475,35 +856,32 @@ Timelineへ追加
         ▼
 Supabase INSERT
         │
-        ├───────────────┐
-        ▼               ▼
-     成功             失敗
-        │               │
-        ▼               ▼
-実データへ置換     temp投稿削除
+        ├──────────────┐
+        ▼              ▼
+成功             エラー
+        │              │
+        ▼              ▼
+temp投稿置換     temp投稿削除
 ```
 
 ---
 
-## 11.3 投稿Realtime同期
+## 11.3 投稿Realtime
 
 ### 処理概要
 
-Realtime INSERT を購読し、新しい投稿を即時反映する。
+Realtime により投稿を同期する。
 
 ### 処理フロー
 
 ```text
-Supabase
+投稿追加
         │
         ▼
-Realtime INSERT
+Realtime Event
         │
         ▼
 重複チェック
-        │
-        ▼
-temp投稿なら置換
         │
         ▼
 Timeline更新
@@ -511,11 +889,11 @@ Timeline更新
 
 ---
 
-## 11.4 共感スタンプ
+## 11.4 リアクション
 
 ### 処理概要
 
-スタンプ処理は PostgreSQL RPC により一括管理される。
+リアクション操作は RPC に集約する。
 
 ### 処理フロー
 
@@ -534,10 +912,12 @@ PostgreSQL
         │
         ├───────────────┐
         ▼               ▼
-INSERT/UPDATE/DELETE 判定
+INSERT
+UPDATE
+DELETE
         │
         ▼
-Realtime
+Realtime通知
         │
         ▼
 useReactions()
@@ -548,53 +928,22 @@ ReactionBar更新
 
 ---
 
-## 11.5 Realtime（スタンプ）
+## 11.5 毎朝6時削除
 
 ### 処理概要
 
-スタンプ変更は post_reactions の Realtime を利用して同期する。
+Cron により投稿をリセットする。
 
-```text
-UserA
-        │
-        ▼
-RPC実行
-        │
-        ▼
-post_reactions更新
-        │
-        ▼
-Realtime
-        │
-        ▼
-UserB
-        │
-        ▼
-fetchReactions()
-        │
-        ▼
-件数更新
-```
-
----
-
-## 11.6 毎朝6時自動削除
-
-### 処理概要
-
-pg_cron により毎朝投稿をリセットする。
+### 処理フロー
 
 ```text
 pg_cron
         │
         ▼
+DELETE post_reactions
+        │
+        ▼
 DELETE posts
-        │
-        ▼
-ON DELETE CASCADE
-        │
-        ▼
-post_reactions削除
         │
         ▼
 Realtime通知
@@ -605,9 +954,33 @@ Timeline更新
 
 ---
 
+## 11.6 SEO
+
+### 処理概要
+
+Next.js Metadata API によりSEO情報を生成する。
+
+```text
+layout.tsx
+        │
+        ▼
+metadata
+        │
+        ▼
+title
+description
+OGP
+Twitter Card
+manifest
+robots
+sitemap
+```
+
+---
+
 # 12. シーケンス図
 
-## 12.1 投稿送信
+## 12.1 投稿
 
 ```mermaid
 sequenceDiagram
@@ -617,8 +990,7 @@ participant PostForm
 participant usePosts
 participant Supabase
 
-User->>PostForm: 投稿入力
-User->>PostForm: 送信
+User->>PostForm: 投稿
 
 PostForm->>usePosts: addPost()
 
@@ -644,16 +1016,16 @@ participant UserB
 
 UserA->>Supabase: 投稿
 
-Supabase-->>UserB: INSERT Event
+Supabase-->>UserB: Realtime
 
-UserB->>usePosts: Realtime受信
+UserB->>usePosts: 更新
 
-usePosts-->>Timeline: 更新
+usePosts-->>Timeline: 再描画
 ```
 
 ---
 
-## 12.3 共感スタンプ
+## 12.3 リアクション
 
 ```mermaid
 sequenceDiagram
@@ -664,7 +1036,7 @@ participant useReactions
 participant RPC
 participant Supabase
 
-User->>ReactionBar: スタンプ押下
+User->>ReactionBar: タップ
 
 ReactionBar->>useReactions: toggleReaction()
 
@@ -676,32 +1048,49 @@ Supabase-->>useReactions: Success
 
 Supabase-->>useReactions: Realtime
 
-useReactions-->>ReactionBar: 件数更新
+useReactions-->>ReactionBar: 更新
 ```
 
 ---
 
-## 12.4 Guest ID
+## 12.4 Cron
+
+```mermaid
+sequenceDiagram
+
+participant Cron
+participant PostgreSQL
+participant Realtime
+participant Browser
+
+Cron->>PostgreSQL: DELETE post_reactions
+
+Cron->>PostgreSQL: DELETE posts
+
+PostgreSQL-->>Realtime: DELETE Event
+
+Realtime-->>Browser: Timeline更新
+```
+
+---
+
+## 12.5 SEO
 
 ```mermaid
 sequenceDiagram
 
 participant Browser
-participant useGuestId
+participant Next.js
 
-Browser->>useGuestId: 初回アクセス
+Browser->>Next.js: Request
 
-useGuestId->>Browser: localStorage確認
+Next.js-->>Browser: metadata
 
-alt Guest IDなし
+Next.js-->>Browser: manifest
 
-useGuestId->>Browser: UUID生成
+Next.js-->>Browser: robots
 
-useGuestId->>Browser: 保存
-
-end
-
-Browser-->>useGuestId: Guest ID返却
+Next.js-->>Browser: sitemap
 ```
 
 ---
@@ -711,15 +1100,23 @@ Browser-->>useGuestId: Guest ID返却
 ```text
 src
 ├── app
+│   ├── favicon.ico
 │   ├── globals.css
 │   ├── layout.tsx
-│   └── page.tsx
+│   ├── page.tsx
+│   ├── manifest.ts
+│   ├── robots.ts
+│   ├── sitemap.ts
+│   ├── privacy
+│   │   └── page.tsx
+│   └── terms
+│       └── page.tsx
 │
 ├── components
-│   ├── PostForm.tsx
-│   ├── Timeline.tsx
 │   ├── PostCard.tsx
-│   └── ReactionBar.tsx
+│   ├── PostForm.tsx
+│   ├── ReactionBar.tsx
+│   └── Timeline.tsx
 │
 ├── hooks
 │   ├── useGuestId.ts
@@ -732,81 +1129,36 @@ src
 │
 └── types
     └── index.ts
+
+public
+├── apple-icon.png
+├── favicon.ico
+├── icon.png
+└── og-image.png
 ```
-
----
-
-## ディレクトリ方針
-
-### app
-
-- 画面レイアウト
-- ページ構成
-- グローバルCSS
-
----
-
-### components
-
-UI表示のみ担当する。
-
-データ取得は Hook へ委譲する。
-
----
-
-### hooks
-
-ビジネスロジックを担当する。
-
-- 投稿取得
-- 投稿追加
-- Guest ID管理
-- Realtime同期
-- RPC呼び出し
-
----
-
-### lib
-
-Supabaseクライアントを Singleton として管理する。
-
----
-
-### types
-
-共通型を一元管理する。
 
 ---
 
 # 14. 実装方針
 
-## 14.1 コンポーネント設計
+## 14.1 基本方針
 
-UI とロジックを完全に分離する。
-
-### UI
-
-- Home
-- Timeline
-- PostCard
-- ReactionBar
-- PostForm
-
----
-
-### Hook
-
-- usePosts
-- useGuestId
-- useReactions
+- App Router採用
+- Server Componentsを基本とする
+- Client Componentは必要最小限
+- UIとロジックを分離
+- Hookへ責務を集約
 
 ---
 
 ## 14.2 State管理
 
-React Context は利用しない。
+使用するState
 
-必要最小限の useState を採用する。
+- useState
+- useEffect
+
+Contextは利用しない。
 
 ---
 
@@ -818,7 +1170,7 @@ React Context は利用しない。
 usePosts()
 ```
 
-スタンプ
+リアクション
 
 ```
 useReactions()
@@ -834,82 +1186,210 @@ useGuestId()
 
 ## 14.4 Optimistic Update
 
-投稿は即時画面反映する。
+投稿は通信完了を待たず表示する。
 
-通信成功後に temp投稿 を実データへ置換する。
+成功時
 
-通信失敗時は temp投稿 を削除する。
+- 実データへ置換
+
+失敗時
+
+- 仮投稿削除
 
 ---
 
 ## 14.5 Realtime
 
-投稿
+Realtime対象
 
-- INSERT購読
-
-スタンプ
-
-- post_reactions購読
-
-重複データは排除する。
+- posts
+- post_reactions
 
 ---
 
 ## 14.6 RPC
 
-スタンプ追加・変更・解除は
+リアクション更新は
 
 ```
 toggle_reaction()
 ```
 
-RPCへ集約する。
+のみを利用する。
 
-フロント側では INSERT / UPDATE / DELETE を判定しない。
+INSERT / UPDATE / DELETE の判定はDB側で行う。
 
 ---
 
 ## 14.7 エラーハンドリング
 
-開発中のみ
+開発時
 
 ```
 console.error()
 ```
 
-投稿失敗時のみ
+投稿失敗時
 
 ```
 alert()
 ```
 
-を表示する。
-
 ---
 
 ## 14.8 パフォーマンス
 
-- 投稿取得100件
 - Optimistic Update
-- Realtime同期
-- useCallback利用
-- Singleton Supabase Client
-- 不要な再描画を抑制
+- Realtime
+- Singleton Client
+- 必要最小限の再描画
+- インデックス最適化
 
 ---
 
-## 14.9 UI方針
+## 14.9 アクセシビリティ
 
-- モバイルファースト
-- ダークテーマ
-- 最大幅480px
-- 固定ヘッダー
-- 固定投稿フォーム
-- タイムラインのみスクロール
-- 押しやすいスタンプボタン（44px以上）
-- Skeleton Loader
-- アクセシビリティ対応（aria-label・aria-pressed等）
+対応項目
+
+- Skip Link
+- aria-label
+- aria-live
+- aria-modal
+- aria-hidden
+- aria-pressed
+- focus-visible
+- キーボード操作
+
+---
+
+## 14.10 SEO
+
+Next.js Metadata APIを利用する。
+
+対応項目
+
+- title
+- description
+- keywords
+- OGP
+- Twitter Card
+- robots
+- sitemap
+- manifest
+- favicon
+
+---
+
+# 15. Supabase設定
+
+## 15.1 テーブル
+
+利用テーブル
+
+- posts
+- post_reactions
+
+---
+
+## 15.2 Realtime
+
+対象
+
+- posts
+- post_reactions
+
+Publication
+
+```
+supabase_realtime
+```
+
+---
+
+## 15.3 RPC
+
+利用関数
+
+```
+toggle_reaction()
+```
+
+責務
+
+- INSERT
+- UPDATE
+- DELETE
+
+---
+
+## 15.4 RLS
+
+対象
+
+- posts
+- post_reactions
+
+許可
+
+|操作|許可|
+|----|----|
+|SELECT|〇|
+|INSERT|〇|
+|UPDATE|〇|
+|DELETE|〇|
+
+---
+
+## 15.5 Cron
+
+毎日
+
+```
+06:00
+```
+
+実行SQL
+
+```sql
+DELETE FROM post_reactions;
+
+DELETE FROM posts;
+```
+
+---
+
+## 15.6 インデックス
+
+posts
+
+- created_at
+- guest_id
+
+post_reactions
+
+- post_id
+- unique(post_id, guest_id)
+
+---
+
+## 15.7 環境変数
+
+```
+NEXT_PUBLIC_SUPABASE_URL
+
+NEXT_PUBLIC_SUPABASE_ANON_KEY
+```
+
+---
+
+## 15.8 セキュリティ
+
+- Service Role Keyは使用しない
+- Anon Keyのみ利用
+- RLS有効
+- RPC経由で更新
+- HTTPS通信
+- Guest IDによる匿名利用
 
 # 15. Supabase設定
 
@@ -922,9 +1402,215 @@ alert()
 
 ---
 
-## 15.2 Realtime
+## 15.2 テーブル概要
 
-Realtime対象テーブル
+### posts
+
+投稿データを保持する。
+
+|項目|内容|
+|----|----|
+|id|UUID|
+|guest_id|投稿者識別用UUID|
+|body|投稿本文（140文字以内）|
+|created_at|投稿日時|
+
+---
+
+### post_reactions
+
+共感リアクションを保持する。
+
+|項目|内容|
+|----|----|
+|id|UUID|
+|post_id|投稿ID|
+|guest_id|リアクションした利用者|
+|reaction|リアクション種別|
+|created_at|リアクション日時|
+
+1ユーザーにつき1投稿1リアクションとなるよう、
+
+# 16. セキュリティ設計
+
+## 16.1 基本方針
+
+本システムは匿名利用を前提としたWebアプリケーションである。
+
+利用者登録は行わず、必要最小限の情報のみを保持する。
+
+個人情報の収集を目的とせず、安全かつシンプルな構成を維持する。
+
+---
+
+## 16.2 匿名利用（Guest ID）
+
+利用者識別には UUID を利用する。
+
+保存先
+
+- localStorage
+
+用途
+
+- 投稿者識別
+- リアクション重複防止
+
+Guest ID は認証情報ではなく、匿名利用のための識別子として扱う。
+
+---
+
+## 16.3 保存する情報
+
+保持する情報は以下のみとする。
+
+### posts
+
+- id
+- guest_id
+- body
+- created_at
+
+### post_reactions
+
+- id
+- post_id
+- guest_id
+- reaction
+- created_at
+
+---
+
+## 16.4 保存しない情報
+
+以下の情報は保持しない。
+
+- 氏名
+- メールアドレス
+- パスワード
+- 電話番号
+- 生年月日
+- SNSアカウント
+- 住所
+
+アプリケーション側では IP アドレスも保存しない。
+
+---
+
+## 16.5 入力制限
+
+投稿本文
+
+- 最大140文字
+- 空文字禁止
+- trim() による前後空白除去
+
+リアクション
+
+許可値
+
+- otsukare
+- okiteru
+- wakaru
+- naiteru
+- ganbare
+
+DB側でも CHECK 制約により保証する。
+
+---
+
+## 16.6 データベース保護
+
+### Row Level Security
+
+以下のテーブルで RLS を有効化する。
+
+- posts
+- post_reactions
+
+公開ポリシー
+
+|テーブル|SELECT|INSERT|UPDATE|DELETE|
+|---------|------|------|------|------|
+|posts|〇|〇|-|-|
+|post_reactions|〇|〇|〇|〇|
+
+---
+
+## 16.7 RPC
+
+リアクション更新は
+
+```
+toggle_reaction()
+```
+
+のみを利用する。
+
+クライアント側では
+
+- INSERT
+- UPDATE
+- DELETE
+
+の判定を行わない。
+
+DB側で一元管理することで保守性を高める。
+
+---
+
+## 16.8 SQLインジェクション対策
+
+データ操作は
+
+- Supabase JavaScript SDK
+- PostgreSQL RPC
+
+のみを利用する。
+
+文字列連結によるSQL実行は行わない。
+
+---
+
+## 16.9 XSS対策
+
+React の自動エスケープ機能を利用する。
+
+以下は使用しない。
+
+```
+dangerouslySetInnerHTML
+```
+
+投稿本文は文字列として表示する。
+
+---
+
+## 16.10 通信
+
+通信は HTTPS を前提とする。
+
+Supabase SDK を利用することで安全に通信する。
+
+---
+
+## 16.11 環境変数
+
+公開する環境変数
+
+```
+NEXT_PUBLIC_SUPABASE_URL
+
+NEXT_PUBLIC_SUPABASE_ANON_KEY
+```
+
+Service Role Key はフロントエンドで使用しない。
+
+---
+
+## 16.12 Realtime
+
+Realtime対象
 
 - posts
 - post_reactions
@@ -935,251 +1621,126 @@ Publication
 supabase_realtime
 ```
 
-Realtimeを利用することで、
-
-- 投稿追加
-- 共感スタンプ追加
-- 共感スタンプ変更
-- 共感スタンプ解除
-
-をリアルタイムで同期する。
+リアルタイム同期は公開情報のみとする。
 
 ---
 
-## 15.3 RPC
+## 16.13 自動削除
 
-スタンプ操作は PostgreSQL Function を利用する。
-
-関数名
+毎朝6時に
 
 ```
-toggle_reaction()
+pg_cron
 ```
 
-責務
+により
 
-- INSERT
-- UPDATE
-- DELETE
+```
+DELETE FROM post_reactions;
 
-の判定をデータベース側で行う。
+DELETE FROM posts;
+```
 
-クライアント側では状態判定を持たない。
+を実行する。
+
+投稿を長期間保存しない運用とする。
 
 ---
 
-## 15.4 Row Level Security
+## 16.14 エラーハンドリング
 
-RLS を有効化する。
-
-対象テーブル
-
-- posts
-- post_reactions
-
-許可する操作
-
-|操作|許可|
-|----|----|
-|SELECT|〇|
-|INSERT|〇|
-|UPDATE|〇|
-|DELETE|〇|
-
-RPC実行権限も付与する。
-
----
-
-## 15.5 自動削除
-
-Supabase pg_cron を利用する。
-
-実行時刻
+開発中
 
 ```
-毎朝06:00
+console.error()
 ```
 
-削除対象
+投稿失敗時
 
 ```
-posts
+alert()
 ```
 
-関連するスタンプは
-
-```
-ON DELETE CASCADE
-```
-
-により自動削除される。
-
----
-
-## 15.6 環境変数
-
-```
-NEXT_PUBLIC_SUPABASE_URL
-
-NEXT_PUBLIC_SUPABASE_ANON_KEY
-```
-
----
-
-## 15.7 接続ライブラリ
-
-```
-@supabase/supabase-js
-```
-
-Singleton Client として利用する。
-
----
-
-## 15.8 セキュリティ方針
-
-- Service Role Key は利用しない
-- Anon Key のみ公開
-- RLSによるアクセス制御
-- Guest ID による匿名識別
-- RPC経由でスタンプ更新
-
----
-
-# 16. セキュリティ設計
-
-## 16.1 基本方針
-
-本システムは匿名利用を前提とする。
-
-個人情報は保持しない。
-
-認証機能も実装しない。
-
----
-
-## 16.2 Guest ID
-
-Guest ID は UUID を利用する。
-
-保存先
-
-```
-localStorage
-```
-
-目的
-
-- 同一利用者判定
-- 共感スタンプ重複防止
-
-Guest ID は個人情報ではない。
-
----
-
-## 16.3 保存しない情報
-
-以下は保存しない。
-
-- 氏名
-- メールアドレス
-- 電話番号
-- 生年月日
-- SNSアカウント
-
-アプリケーション側では IP アドレスも保持しない。
-
----
-
-## 16.4 入力制限
-
-投稿本文
-
-- 最大140文字
-- 空文字禁止
-- trim() による前後空白除去
-
-スタンプ
-
-以下のみ許可する。
-
-- otsukare
-- okiteru
-- wakaru
-- naiteru
-- ganbare
-
-データベース側でも CHECK 制約により保証する。
-
----
-
-## 16.5 SQLインジェクション対策
-
-データ操作は
-
-Supabase JavaScript SDK
-
-および
-
-RPC
-
-のみを利用する。
-
-文字列連結によるSQL実行は行わない。
-
----
-
-## 16.6 XSS対策
-
-React のエスケープ機能を利用する。
-
-HTMLとして描画するAPI
-
-```
-dangerouslySetInnerHTML
-```
-
-は使用しない。
-
----
-
-## 16.7 通信
-
-Supabase SDK を利用する。
-
-HTTPS通信のみを利用する。
-
----
-
-## 16.8 エラー処理
-
-通信エラー
-
-- console.error（開発時）
-
-投稿失敗
-
-- alert表示
-
-本番では
-
-Sentry 等の導入を検討する。
+本番運用では必要に応じてログ監視サービスの導入を検討する。
 
 ---
 
 # 17. 運用・保守方針
 
-## 17.1 投稿運用
+## 17.1 基本方針
 
-投稿は一時的な感情共有を目的とする。
+本システムは
 
-毎朝6時に自動削除する。
+「小さく、安全に、保守しやすく」
 
-長期間保存は行わない。
+を基本方針とする。
+
+責務分離を維持し、過度な複雑化を避ける。
 
 ---
 
-## 17.2 共感スタンプ
+## 17.2 アーキテクチャ
+
+```
+UI
+ ↓
+Hooks
+ ↓
+Supabase SDK
+ ↓
+RPC
+ ↓
+Database
+```
+
+この責務分離を維持する。
+
+---
+
+## 17.3 ディレクトリ構成
+
+```
+src
+├── app
+├── components
+├── hooks
+├── lib
+├── types
+└── public
+```
+
+役割を混在させない。
+
+---
+
+## 17.4 UI設計
+
+以下を維持する。
+
+- スマホファースト
+- 最大幅480px
+- ダークテーマ
+- 固定ヘッダー
+- 固定投稿フォーム
+- タイムラインのみスクロール
+
+---
+
+## 17.5 投稿運用
+
+投稿は毎朝6時に削除する。
+
+長期間の保存は行わない。
+
+匿名で気軽に利用できることを優先する。
+
+---
+
+## 17.6 リアクション運用
+
+1投稿につき1リアクションのみ許可する。
+
+変更・解除は RPC により管理する。
 
 投稿削除時は
 
@@ -1187,59 +1748,54 @@ Sentry 等の導入を検討する。
 ON DELETE CASCADE
 ```
 
-により自動削除される。
-
-追加の削除処理は不要。
+により関連データを削除する。
 
 ---
 
-## 17.3 保守方針
+## 17.7 Realtime運用
 
-責務分離を維持する。
+Realtime は
 
-```
-UI
+- posts
+- post_reactions
 
-↓
+のみ利用する。
 
-Hook
-
-↓
-
-Supabase SDK
-
-↓
-
-RPC
-
-↓
-
-Database
-```
-
-新機能追加時もこの構成を維持する。
+不要な購読は追加しない。
 
 ---
 
-## 17.4 コーディングルール
+## 17.8 Cron運用
+
+毎朝6時
+
+```
+DELETE FROM post_reactions;
+
+DELETE FROM posts;
+```
+
+を実行する。
+
+定期的に pg_cron Job を確認する。
+
+---
+
+## 17.9 コーディングルール
 
 ### Component
 
-1ファイル1責務
+- 1ファイル1責務
 
----
-
-### Hook
+### Hooks
 
 ```
 use〇〇
 ```
 
-命名とする。
+命名を採用する。
 
----
-
-### 型定義
+### 型
 
 ```
 src/types
@@ -1247,15 +1803,13 @@ src/types
 
 へ集約する。
 
----
-
 ### Supabase
 
 Singleton Client を利用する。
 
 ---
 
-## 17.5 バージョン管理
+## 17.10 バージョン管理
 
 Git を利用する。
 
@@ -1272,183 +1826,331 @@ feature/*
 コミット例
 
 ```
-feat: add optimistic update
+feat: add realtime reaction
 
-feat: add reaction rpc
+feat: add footer links
 
-fix: duplicate reaction bug
+fix: duplicate optimistic update
 
 refactor: cleanup usePosts
 ```
 
 ---
 
-## 17.6 障害対応
+## 17.11 障害対応
 
-障害発生時は
+障害発生時は以下の順で確認する。
 
-1. エラーログ確認
-2. Supabaseログ確認
-3. Realtime状態確認
-4. RLS確認
-5. RPC確認
-
-の順で調査する。
+1. ブラウザ Console
+2. Network
+3. Supabase Logs
+4. Realtime
+5. RPC
+6. RLS
+7. Cron
 
 ---
 
-## 17.7 将来的な改善候補
+## 17.12 Lighthouse運用
 
+公開前に以下を確認する。
+
+|項目|目標|
+|----|----:|
+|Performance|95以上|
+|Accessibility|100|
+|Best Practices|100|
+|SEO|100|
+
+---
+
+## 17.13 SEO運用
+
+以下を管理する。
+
+- metadata
+- manifest
+- robots
+- sitemap
+- OGP画像
+- favicon
+- Apple Touch Icon
+- Twitter Card
+
+ドメイン変更時は
+
+- sitemap
+- robots
+- metadataBase
+
+を更新する。
+
+---
+
+## 17.14 今後の改善候補
+
+Ver.1.1以降で検討する。
+
+- guest_id 型統一（uuid → text）
+- Rate Limit
+- NGワードフィルタ
+- 通報機能
+- PWA
+- Analytics
 - Sentry
-- LogRocket
-- E2Eテスト
-- CI/CD
 - GitHub Actions
 
----
+Ver.1.0ではシンプルな構成を維持する。
 
 # 18. ロードマップ
 
-## Phase 1（MVP）
+## 18.1 Ver.1.0（公開版）
 
-実装済み
+### コンセプト
 
-- 投稿
-- 投稿一覧
-- Guest ID
-- Realtime
+匿名で安心して気持ちを吐き出せる場所を提供する。
+
+複雑な機能は追加せず、軽量・高速・保守性を重視する。
+
+---
+
+### 実装済み機能
+
+#### 投稿
+
+- 匿名投稿
+- 140文字制限
 - Optimistic Update
 
-ステータス
+#### タイムライン
 
-```
-完了
-```
-
----
-
-## Phase 2（共感スタンプ）
-
-実装済み
-
-- ReactionBar
-- useReactions
-- RPC
+- 新着順表示
 - Realtime同期
-- スタンプ件数表示
-- 自分のスタンプ表示
+- Skeleton Loader
+- Empty State
 
-ステータス
+#### リアクション
 
-```
-完了
-```
+- RPC
+- Realtime
+- 追加
+- 変更
+- 解除
+- リアクションサマリー
+- LINE風UI
+- スマホ長押し対応
+- PCクリック対応
 
----
-
-## Phase 3（UI/UX改善）
-
-実装済み
+#### UI
 
 - ダークテーマ
-- グラデーション背景
-- モバイルUI
+- モバイルファースト
 - 固定ヘッダー
 - 固定投稿フォーム
-- タイムラインスクロール
-- Skeleton Loader
-- アニメーション
-- アクセシビリティ対応
+- グラデーション背景
+- 初回オープニング
+- Skip Link
+- Safe Area対応
 
-ステータス
+#### SEO
 
-```
-完了
-```
+- Metadata API
+- OGP
+- Twitter Card
+- robots
+- sitemap
+- manifest
+- favicon
+- Apple Touch Icon
+
+#### セキュリティ
+
+- RLS
+- RPC
+- Realtime
+- Cron
+- 外部キー
+- インデックス
 
 ---
 
-## Phase 4（今後の改善候補）
+### 公開目標
+
+Lighthouse
+
+|項目|目標|
+|----|----:|
+|Performance|95以上|
+|Accessibility|100|
+|Best Practices|100|
+|SEO|100|
+
+---
+
+## 18.2 Ver.1.1
+
+公開後の改善を予定する。
+
+### 改善候補
+
+- guest_id 型統一
+- エラーメッセージ改善
+- UI微調整
+- パフォーマンス改善
+- コードリファクタリング
+
+現行アーキテクチャは維持する。
+
+---
+
+## 18.3 Ver.2.0
+
+将来的な機能追加候補
+
+### UX改善
 
 - NGワードフィルタ
-- 通報機能
-- スパム対策
 - 投稿レート制限
-- PWA対応
-- オフライン対応
+- スパム対策
+- 通報機能
 
----
+### PWA
 
-## Phase 5（運用強化）
+- ホーム画面追加
+- Splash Screen
+- Offline対応
 
-- 管理画面
-- 投稿数ダッシュボード
+### 運用
+
 - Analytics
-- Sentry導入
+- Sentry
 - GitHub Actions
+- CI/CD
+
+必要になるまで導入しない。
 
 ---
 
-## 18.1 テスト方針
+## 18.4 リリースチェックリスト
 
-リリース前には以下を確認する。
+### アプリ
 
-- 投稿
-- 投稿削除（Cron）
-- Realtime
-- Optimistic Update
-- Guest ID保持
-- スタンプ追加
-- スタンプ変更
-- スタンプ解除
-- RPC動作
+- 投稿できる
+- 投稿削除できる
+- 投稿がRealtime同期される
+- Optimistic Updateが動作する
+- Guest IDが保持される
+
+### リアクション
+
+- 追加できる
+- 変更できる
+- 解除できる
+- Realtime同期する
+- RPCが正常動作する
+
+### UI
+
 - モバイル表示
-- Safari動作
-- Chrome動作
+- PC表示
+- Safari
+- Chrome
+- Edge
+
+### データベース
+
+- RLS
+- Policy
+- RPC
+- Realtime
+- Cron
+- 外部キー
+- インデックス
+
+### SEO
+
+- title
+- description
+- OGP
+- Twitter Card
+- favicon
+- manifest
+- robots
+- sitemap
+
+### Lighthouse
+
+- Performance 95以上
+- Accessibility 100
+- Best Practices 100
+- SEO 100
 
 ---
 
-## 18.2 開発方針
+## 18.5 保守チェックリスト
 
-本システムは
+リリース後も以下を定期的に確認する。
 
-「小さく作り、継続的に改善する」
-
-ことを基本方針とする。
-
-複雑な機能を増やすよりも、
-
-利用者が安心して短時間で使える体験を優先する。
-
----
-
-## 18.3 設計思想
-
-本アプリで最も重要なのは、
-
-「安心して気持ちを吐き出せる場所」
-
-である。
-
-そのため今後も以下を最優先とする。
-
-- 匿名で利用できること
-- 誰かを評価しないこと
-- コメント機能を追加しないこと
-- 共感だけが返ってくること
-- 深夜でも静かに利用できること
-- シンプルな操作性を維持すること
+- Supabase稼働状況
+- Cron実行状況
+- Realtime動作
+- RLS設定
+- RPC動作
+- OGP表示
+- robots
+- sitemap
+- Lighthouseスコア
 
 ---
 
-## 18.4 更新履歴
+## 18.6 設計方針
+
+今後も以下の原則を維持する。
+
+- モバイルファースト
+- シンプルなUI
+- 保守性重視
+- 責務分離
+- App Router準拠
+- Server Component優先
+- Client Component最小化
+- Supabase公式SDK利用
+- 不要なライブラリを追加しない
+
+---
+
+## 18.7 更新履歴
 
 |バージョン|内容|
 |-----------|----|
 |0.1|設計書作成|
-|0.2|Realtime対応|
-|0.3|朝6時自動削除追加|
-|0.4|共感スタンプ設計追加|
-|1.0|MVP完成|
-|2.0|実装完全準拠版へ全面更新（Optimistic Update・Realtime・RPC・UI/UX改善・アクセシビリティ対応）|
+|0.2|Realtime設計追加|
+|0.3|Cron追加|
+|0.4|RPC・リアクション設計追加|
+|0.5|Optimistic Update追加|
+|0.6|アクセシビリティ対応|
+|0.7|Lighthouse最適化|
+|0.8|SEO・OGP・manifest対応|
+|0.9|利用規約・プライバシーポリシー追加|
+|1.0|公開版完成|
 
+---
+
+## 18.8 今後の開発方針
+
+本アプリは、
+
+**「安心して今の気持ちを吐き出せる場所」**
+
+というコンセプトを最優先とする。
+
+そのため、今後も以下の方針を維持する。
+
+- 匿名で利用できること
+- 個人情報を扱わないこと
+- コメント機能を追加しないこと
+- 共感だけが返ってくること
+- 深夜でも安心して利用できること
+- シンプルで迷わないUIを維持すること
+- 保守性を損なう実装を行わないこと
+- 必要最小限の機能追加を継続すること

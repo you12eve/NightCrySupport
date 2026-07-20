@@ -10,17 +10,13 @@
 
 # デモ
 
-（デプロイ後にURLを記載）
-
-例
-
-https://xxxxx.vercel.app
+デプロイ後に公開URLを掲載予定です。
 
 ---
 
 # スクリーンショット
 
-（デプロイ後に追加）
+公開後に追加予定です。
 
 - ホーム画面
 - 投稿画面
@@ -160,13 +156,21 @@ PostgreSQL
 src
 ├── app
 │   ├── globals.css
-│   └── page.tsx
+│   ├── layout.tsx
+│   ├── manifest.ts
+│   ├── page.tsx
+│   ├── robots.ts
+│   ├── sitemap.ts
+│   ├── privacy
+│   │   └── page.tsx
+│   └── terms
+│       └── page.tsx
 │
 ├── components
-│   ├── PostForm.tsx
-│   ├── Timeline.tsx
 │   ├── PostCard.tsx
-│   └── ReactionBar.tsx
+│   ├── PostForm.tsx
+│   ├── ReactionBar.tsx
+│   └── Timeline.tsx
 │
 ├── hooks
 │   ├── useGuestId.ts
@@ -174,6 +178,7 @@ src
 │   └── useReactions.ts
 │
 ├── lib
+│   ├── guest.ts
 │   └── supabase
 │       └── client.ts
 │
@@ -216,7 +221,7 @@ UIは表示のみ。
 |カラム|型|
 |------|---|
 |id|uuid|
-|guest_id|text|
+|guest_id|uuid|
 |body|text|
 |created_at|timestamptz|
 
@@ -354,9 +359,7 @@ MIT License
 
 # 作者
 
-GitHub
-
-（公開後にプロフィールURLを記載）
+GitHubプロフィールは公開後に掲載予定です。
 
 ---
 
